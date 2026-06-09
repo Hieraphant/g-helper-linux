@@ -1,0 +1,89 @@
+=====================================================================
+ TANGOR FORK — COMPLETE FEATURE AUDIT  (FA617NT, kernel 7.0.0)
+ Source: g-helper's OWN startup capability detection (live log),
+ cross-checked against our coverage. This is the "nothing forgotten"
+ checklist — every capability g-helper detects is accounted for below.
+ Companion docs (markdown): TANGOR-TRACKER.md (board), TANGOR-FINDINGS.md
+ (why), TANGOR-NOTES.md (onboarding).
+=====================================================================
+
+LEGEND: [OK] working   [GAP] on the board (TANGOR-TRACKER NEXT UP)
+        [HW] hardware-blocked (not fixable in SW)   [N/A] not on this machine
+
+---------------------------------------------------------------------
+ POWER / CPU / APU
+---------------------------------------------------------------------
+[OK]  Performance modes (Silent/Balanced/Turbo) ......... detected "YES"
+[OK]  PL1 power limit ................................... detected "YES" (cosmetic sysfs -> RyzenAdj slow-limit)
+[OK]  PL2 power limit ................................... detected "YES" (cosmetic sysfs -> RyzenAdj fast-limit)
+[OK]  fPPT ............................................. -> RyzenAdj fast-limit
+[OK]  APU envelope (SmartShift lever) .................. -> RyzenAdj apu-slow-limit (slider added)
+[OK]  Tctl / dGPU-skin temps ........................... RyzenAdj-only sliders added
+[OK]  Curve Optimizer (undervolt) ...................... "available via ryzen_smu" (Rembrandt Zen3+, SMU 4.69)
+                                                          CO dormant unless deliberately enabled (auto_uv=0)
+[OK]  ppt_pl1/pl2/fppt/apu/platform_sppt ............... all "legacy sysfs" = COSMETIC; bypassed via RyzenAdj
+[OK]  Reapply/reinforcement timer ...................... active; out-stubborns every EC clobber
+[GAP] AutoCpuPower reinforces APU/Tctl/skin ............ #11 — log proves it: "APU SPPT=150W mirrored from
+                                                          max(PL1,PL2)" overwrites user APU; verify reads
+                                                          cosmetic "PL1=65W". Timer only re-asserts slow/fast.
+[GAP] Manual Apply button .............................. #12
+[GAP] Reset-to-default button .......................... #15
+[GAP] EPP / amd-pstate per mode ........................ #14 (headless only; make its own window)
+[HW]  STAPM limit ...................................... firmware-locked (ryzenadj reports success, SMU ignores)
+
+---------------------------------------------------------------------
+ GPU
+---------------------------------------------------------------------
+[OK]  GPU vendor auto-detect ........................... "GPU Control: AMD - AMD GPU (113-BRT108013.001)"
+[OK]  dGPU power cap (power1_cap) ...................... direct sysfs (110/120W; 120 hard max)
+[OK]  GPU Eco mode (dgpu_disable) ...................... "YES" (firmware-attributes)
+[OK]  MUX switch (gpu_mux_mode) ........................ "YES" (legacy sysfs); startup matched saved 'ultimate'
+[GAP] iGPU 680M min/max clocks (pp_od) ................. #6/iGPU — has pp_od table (~200-2200MHz); not wired
+                                                          (g-helper drives only one AMD GPU today)
+[GAP] gpu-helper deploy (silence root prompt) .......... #13 — log: "gpu_helper=Unavailable ... sudoers=Missing"
+[GAP] Monitoring on trusted source ..................... power1_average glitches ~2x under load; prefer ryzenadj
+[HW]  dGPU clock OC / undervolt ........................ no pp_od on dGPU (vbios-locked); DPM-masking only
+
+---------------------------------------------------------------------
+ FANS
+---------------------------------------------------------------------
+[OK]  Custom fan curves (2 fans) ....................... "Fan count detected: 2"; pwm writable via udev
+[OK]  Monotonic curve drag ............................. clamped (no impossible curves)
+[GAP] Fan Reset re-asserts power after ................. #fan — RESET clobbers power (timer recovers)
+
+---------------------------------------------------------------------
+ DISPLAY / KEYBOARD / MISC  (persist; no reinforcement needed)
+---------------------------------------------------------------------
+[OK]  LCD brightness ................................... backlight amdgpu_bl1 (max 62194); udev rule
+[OK]  Panel overdrive ................................. "YES" (firmware-attributes); works, subtle anti-ghosting
+[OK]  Keyboard RGB (Aura/TUF) .......................... AURA HID found; TUF kbd_rgb boot/awake/sleep
+[OK]  Battery charge limit ............................. BAT0 found
+[OK]  Camera toggle .................................... works
+[N/A] Mini LED ........................................ "no" (not present)
+[N/A] Optimal/ambient display brightness .............. "no" (no sensor)
+[N/A] XGM / XG Mobile dock ............................. "no dock present"
+[N/A] eGPU (egpu_enable/connected) .................... "not found"
+[N/A] NVIDIA dynamic boost / TGP / temp target ........ "no" (AMD machine, nvidia-smi absent)
+
+---------------------------------------------------------------------
+ INPUT / AUDIO
+---------------------------------------------------------------------
+[OK]  Fn-key remapper (brightness/media) ............... in-tree uinput; needs 'input' group; FN-Lock toggles
+[OK]  Virtual mic / DSP (ghelper-audio) ................ PipeWire; Denoise/Vocoder/EQ
+[OK]  Mic-mute sync .................................... SyncSystemMicMute after ToggleMaster
+
+---------------------------------------------------------------------
+ INSTALL / SYSTEM
+---------------------------------------------------------------------
+[OK]  udev rules ....................................... "udev_rules=Ok"
+[OK]  ryzenadj root-owned + sudoers .................... deployed (silent writes)
+[OK]  Nag popups suppressed ............................ per-user config flags; "autostart=Ok"
+[GAP] Self-contained C# installer ...................... #install (currently install.sh only)
+[GAP] gpu-helper + sudoers ............................. "sudoers=Missing" (#13)
+
+=====================================================================
+ BOTTOM LINE: every capability g-helper detects is either [OK],
+ a tracked [GAP] (features/polish, not mysteries), [HW]-blocked, or
+ [N/A] on this hardware. The reverse-engineering is DONE. ASUS firmware
+ cannot hold its own values against the RyzenAdj + reinforcement path.
+=====================================================================
