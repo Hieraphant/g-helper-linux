@@ -130,6 +130,26 @@ OPEN: EPP per mode (TODO); self-contained C# installer (ryzenadj+gpu-helper); vi
 - **gpu-helper auth prompt**: app prompts `pkexec --install-gpu-helper /opt/ghelper` for some GPU ops
   (helper not installed). Either run the full install or route those ops via the now-writable sysfs.
 
+## 9c. Clobber-recovery audit (inspecting-instance Q1–Q3, 2026-06-09)
+- **Q2 — `VerifyPptLimits` is COSMETIC (real gap):** it checks via `wmi.GetPptLimit(attr)`, which reads
+  the asus-wmi / firmware-attributes **sysfs node** — NOT `ryzenadj -i`. That node is the cosmetic one
+  (stores the value, doesn't reflect the SMU). Worse, with the RyzenAdj reroute `SetPptLimit` no longer
+  writes that node for pl1/pl2/fppt, so GetPptLimit reads a STALE value. Net: VerifyPptLimits cannot
+  detect a real SMU clobber — its WARNING is meaningless for the RyzenAdj path. A correct verify must
+  read `ryzenadj -i`. (TODO: add a ryzenadj-based verify.)
+- **Q3a — periodic reapply IS wired + ACTIVE:** config `reapply_time=10`; `RefreshReapplyTimer` →
+  `Timer(10s)`; live log shows `ReapplyTimer: every 10s`. `ReapplyTimer_Elapsed` re-runs AutoFans +
+  **AutoCpuPower** (+AutoGpuPower) for `Modes.GetCurrent()` → re-asserts the current mode's PPT via
+  RyzenAdj every 10s. So clobber recovery exists via this timer (NOT via VerifyPptLimits).
+- **Q3b — Fn+F5 is INVISIBLE to g-helper (no external-mode listener):** grep found no
+  FileSystemWatcher/inotify/udev/D-Bus/poll on `platform_profile`/`throttle_thermal_policy`. g-helper
+  only knows the mode IT set (`Modes.GetCurrent()`). So a hardware Armoury switch doesn't trigger a
+  mode-change handler; the 10s timer keeps re-applying g-helper's OWN mode notion — which can DIVERGE
+  from the hardware mode after Fn+F5 (timer re-asserts e.g. Turbo power while firmware is now Silent).
+- **Q1 — decisive empirical test: PENDING on-metal** (set PL1 slider to 60W, clobber via AC unplug/
+  replug + Fn+F5, read ryzenadj -i after each: does STAPM revert, and does it self-return to 60 within
+  ~10s?). Fill in result below when run.
+
 ## 10. Build / run / test
 - Build: `dotnet build src/GHelper.Linux.csproj -c Release -r linux-x64` (the .sln is a stub).
 - Run test instance: from `src/bin/Release/net10.0/linux-x64/` →
