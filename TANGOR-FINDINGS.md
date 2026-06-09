@@ -35,6 +35,19 @@ RyzenAdj also: `--tctl-temp`, `--apu-skin-temp`, `--dgpu-skin-temp` (RyzenAdj-on
   sliders are dead (no pp_od); iGPU clocks not currently wired (it only drives one AMD GPU).
 - 7B LLM inference is **memory-bandwidth-bound**: ~52 tok/s at BOTH 100W and 120W dGPU cap.
 
+## 3b. dGPU monitoring sources (verified on-metal) + SmartShift confirmation
+All under `/sys/class/drm/card1/device/` (dGPU). Read these for the monitor; do NOT trust
+hwmon `power1_average` under load (~2× glitch on this RDNA3 mobile card — at idle it reads a
+plausible ~3W, but it inflates under load).
+- `hwmon/hwmon*/power1_average` (draw µW, suspect under load), `power1_cap` / `power1_cap_max` (µW; 120W).
+- `hwmon/hwmon*/temp1_input` edge, `temp2_input` hotspot/junction, `temp3_input` mem (m°C).
+- `pp_dpm_sclk` core states (idle e.g. `1: 805Mhz *`, top `2: 2208Mhz`), `pp_dpm_mclk` mem states.
+- `gpu_busy_percent` utilization; `mem_info_vram_used` (~1.4 GiB idle) + `mem_info_gtt_used`
+  (system RAM the dGPU borrows) — watch BOTH during inference (spill goes to CPU, GTT stays low).
+- `pp_features` = SMU feature table. **SMARTSHIFT (bit 25) = ENABLED** — confirms the
+  apu-slow-limit → dGPU SmartShift lever is real. Also enabled: GFXOFF, THROTTLERS, FAN_CONTROL,
+  DPM_GFXCLK/UCLK/FCLK/SOCCLK, ACDC, OUT_OF_BAND_MONITOR. Disabled: GFX_EDC, GFX_PCC_DFLL, LED_DISPLAY.
+
 ## 4. LACT (evaluated, then DROPPED)
 Whole useful surface here = dGPU watts + iGPU clocks + monitoring, all ~70 lines of direct
 sysfs. Decided to drop the daemon, do it in-fork via direct sysfs (fits SysfsHelper). LACT facts
