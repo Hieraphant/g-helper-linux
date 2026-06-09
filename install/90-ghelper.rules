@@ -154,6 +154,10 @@ SUBSYSTEM=="hwmon", ATTR{name}=="asus_custom_fan_curve", \
 SUBSYSTEM=="input", ATTRS{name}=="Asus WMI hotkeys", MODE="0666"
 # USB ASUS HID input devices — covers "Asus Keyboard", "ITE Tech. Inc. ITE Device(8910)", etc.
 SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0b05", MODE="0666"
+# /dev/uinput — WRITE side of the in-process Fn-key remapper (FnLockRemapper re-emits
+# through a uinput virtual keyboard). Without this, CheckCapability() returns EACCES.
+# static_node sets the mode even before the device is first opened.
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0666", OPTIONS+="static_node=uinput"
 
 # ── ASUS HID devices (AURA RGB keyboard control) ──
 # Grant read/write access to ASUS HID raw devices for non-root AURA control.

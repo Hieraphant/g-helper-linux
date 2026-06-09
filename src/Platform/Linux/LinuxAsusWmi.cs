@@ -968,6 +968,17 @@ public class LinuxAsusWmi : IAsusWmi
         if (_lastWrittenInt.TryGetValue(attribute, out int prev) && prev == watts)
             return;
 
+        // AMD platform (FA617NT): the asus-wmi PPT sysfs is a verified no-op — it stores the
+        // value but never reaches the SMU PM table. Route the real CPU/APU power limits through
+        // RyzenAdj (writes the SMU mailbox directly). Falls through to sysfs for unmapped attrs.
+        var raFlag = RyzenAdj.FlagForPpt(attribute, watts);
+        if (raFlag != null && RyzenAdj.Available)
+        {
+            RyzenAdj.Apply(raFlag);
+            _lastWrittenInt[attribute] = watts;
+            return;
+        }
+
         // On dual-backend kernels (asus-nb-wmi + asus-armoury), we cannot predict which
         // backend is functional for any given attribute. Write to ALL available paths
         // legacy sysfs and firmware-attributes - so at least one succeeds.

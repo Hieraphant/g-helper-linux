@@ -497,6 +497,23 @@ if [[ "$MODE" == "install" ]]; then
         _warn "GPU helper extraction failed (GPU switching / holder detection unavailable)"
     fi
 
+    # RyzenAdj — the REAL CPU/APU power lever on AMD ASUS boards (the asus-wmi PPT
+    # sysfs is a verified no-op there). Deploy root-owned so the NOPASSWD rule below
+    # can never point at a user-writable binary. Source is searched in common spots.
+    RYZENADJ_DEST="$HELPER_DIR/ryzenadj"
+    RYZENADJ_SRC=""
+    for c in "$WORK_DIR/ryzenadj" "/usr/local/bin/ryzenadj" "/usr/bin/ryzenadj" \
+             ${SUDO_USER:+"/home/$SUDO_USER/RyzenAdj/build/ryzenadj"}; do
+        [[ -n "$c" && -x "$c" ]] && { RYZENADJ_SRC="$c"; break; }
+    done
+    if [[ -n "$RYZENADJ_SRC" ]]; then
+        install -m 755 -o root -g root "$RYZENADJ_SRC" "$RYZENADJ_DEST" \
+            && _inject "RyzenAdj → $RYZENADJ_DEST (from $RYZENADJ_SRC)" \
+            || _warn "RyzenAdj deploy failed"
+    else
+        _warn "RyzenAdj binary not found — CPU/APU power limits will be unavailable"
+    fi
+
     # Sudoers rule — every privileged GPU operation now goes through the two
     # root-owned helper binaries (gpu-helper validates each subcommand against
     # an internal whitelist, so this is no broader than per-command rules).
@@ -504,6 +521,8 @@ if [[ "$MODE" == "install" ]]; then
     SUDOERS_CONTENT="# G-Helper: passwordless access to the root-owned helper binaries
 ALL ALL=(root) NOPASSWD: $HELPER_DEST
 ALL ALL=(root) NOPASSWD: /opt/ghelper/gpu-helper"
+    [[ -x "$RYZENADJ_DEST" ]] && SUDOERS_CONTENT="$SUDOERS_CONTENT
+ALL ALL=(root) NOPASSWD: $RYZENADJ_DEST"
 
     if [[ -f "$SUDOERS_DEST" ]] && echo "$SUDOERS_CONTENT" | cmp -s - "$SUDOERS_DEST"; then
         _skip "sudoers rule → already deployed at $SUDOERS_DEST"
