@@ -293,6 +293,15 @@ public class FanCurveChart : Control
         }
         else
         {
+            // Keep the curve monotonic non-decreasing — a fan point may not dip below its
+            // left neighbour nor exceed its right neighbour. This makes the "impossible"
+            // non-monotonic curves unreachable by a normal single-point drag (the behaviour
+            // that previously required holding Shift to keep things in line). Shift still
+            // translates the whole curve.
+            int lo = FanMin, hi = FanMax;
+            if (_dragIndex > 0) lo = data[8 + _dragIndex - 1];
+            if (_dragIndex < PointCount - 1) hi = data[8 + _dragIndex + 1];
+            fan = Math.Clamp(fan, lo, hi);
             data[8 + _dragIndex] = (byte)fan;
         }
 
