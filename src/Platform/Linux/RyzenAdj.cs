@@ -45,9 +45,13 @@ public static class RyzenAdj
     /// </summary>
     public static string? FlagForPpt(string attribute, int watts) => attribute switch
     {
-        "ppt_pl1_spl" => $"--stapm-limit={watts * 1000}",
+        // FA617NT: `--stapm-limit` is FIRMWARE-LOCKED — ryzenadj reports success but the SMU
+        // ignores it (verified on-metal, even as root). slow/fast/apu-slow DO stick. So map the
+        // sustained slider (PL1/SPL) to the working sustained lever (slow-limit), and the boost
+        // sliders (PL2/SPPT, fPPT) to fast-limit. (See TANGOR-FINDINGS §9d.)
+        "ppt_pl1_spl" => $"--slow-limit={watts * 1000}",
+        "ppt_pl2_sppt" => $"--fast-limit={watts * 1000}",
         "ppt_fppt" => $"--fast-limit={watts * 1000}",
-        "ppt_pl2_sppt" => $"--slow-limit={watts * 1000}",
         "ppt_apu_sppt" => $"--apu-slow-limit={watts * 1000}",
         _ => null,
     };

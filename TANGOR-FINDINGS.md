@@ -157,3 +157,14 @@ OPEN: EPP per mode (TODO); self-contained C# installer (ryzenadj+gpu-helper); vi
 - Manage app safely: kill by `ps -eo pid,comm | awk '$2=="dotnet"{print $1}'` — NEVER `pkill -f`
   (self-matches the command line; hit this 3×).
 - Screenshot: `spectacle -b -n -f -o x.png`; raise windows via `qdbus6 org.kde.KWin /Scripting`.
+
+## 9d. STAPM is firmware-locked on FA617NT (decisive, 2026-06-09)
+Verified on-metal as ROOT: `ryzenadj --stapm-limit=60000` prints "Successfully set" but STAPM
+stays 174 (read at t+0/+3/+8s — not re-assertion, it just never takes). `--slow-limit`,
+`--fast-limit`, `--apu-slow-limit` ALL stick instantly as root. So the firmware locks STAPM and
+ryzenadj's success message is a lie. CONSEQUENCE: PL1(SPL) was mapped to `--stapm-limit` = dead
+lever → dragging it did nothing while GUI/config showed values (this also explains the GUI-60 /
+config-58 / SMU-174 mismatch). FIX: PL1(SPL)→`--slow-limit` (working sustained lever),
+PL2(SPPT)+fPPT→`--fast-limit`, APU→`--apu-slow-limit`. Working CPU power levers on this board:
+slow-limit, fast-limit, apu-slow-limit (all root). Dead: stapm-limit. NOTE: all power writes go
+through RyzenAdj as root (sudoers NOPASSWD), NEVER the asus-wmi PPT sysfs (cosmetic).
