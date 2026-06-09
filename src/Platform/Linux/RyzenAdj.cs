@@ -69,6 +69,48 @@ public static class RyzenAdj
         return true;
     }
 
+    /// <summary>
+    /// Read the CURRENT SMU limits from `ryzenadj -i` (ground truth). The asus-wmi PPT sysfs nodes
+    /// are cosmetic here — they keep the firmware defaults regardless of what was actually applied —
+    /// so the UI must read these instead. Keys are ryzenadj field names: slow-limit, fast-limit,
+    /// apu-slow-limit, stapm-limit, tctl-temp, apu-skin-temp, dgpu-skin-temp. Values: W or °C.
+    /// Returns null on failure.
+    /// </summary>
+    public static System.Collections.Generic.Dictionary<string, int>? ReadLimits()
+    {
+        var output = SysfsHelper.RunSudoOrPkexec(BinaryPath, new[] { "-i" });
+        if (string.IsNullOrEmpty(output)) return null;
+        var d = new System.Collections.Generic.Dictionary<string, int>();
+        foreach (var raw in output.Split('\n'))
+        {
+            // e.g. "| PPT LIMIT SLOW         |    44.000 | slow-limit         |"
+            var parts = raw.Split('|');
+            if (parts.Length < 4) continue;
+            var key = parts[3].Trim();
+            if (key.Length == 0) continue;
+            if (double.TryParse(parts[2].Trim(), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var val) && val > 0)
+                d[key] = (int)System.Math.Round(val);
+        }
+        return d.Count > 0 ? d : null;
+    }
+
+    /// <summary>Current SMU value for a g-helper PPT attribute (via ryzenadj -i), or -1.</summary>
+    public static int ReadPptLimit(string attribute)
+    {
+        var limits = ReadLimits();
+        if (limits == null) return -1;
+        string key = attribute switch
+        {
+            "ppt_pl1_spl" => "slow-limit",
+            "ppt_pl2_sppt" => "fast-limit",
+            "ppt_fppt" => "fast-limit",
+            "ppt_apu_sppt" => "apu-slow-limit",
+            _ => "",
+        };
+        return key.Length > 0 && limits.TryGetValue(key, out var v) ? v : -1;
+    }
+
     // Convenience setters — watts for power, degrees C for temps.
     public static bool SetStapm(int w) => Apply($"--stapm-limit={w * 1000}");
     public static bool SetFast(int w) => Apply($"--fast-limit={w * 1000}");

@@ -847,14 +847,16 @@ public partial class FansWindow : Window
 
         _updatingPLSliders = true;
 
-        // Read from hardware, fall back to saved config
-        int pl1 = wmi.GetPptLimit(Platform.Linux.AsusAttributes.PptPl1Spl);
+        // Read saved config (the user's intent), fall back to ryzenadj -i (actual SMU). Do NOT read
+        // the asus-wmi PPT sysfs — those nodes are cosmetic here and keep the firmware defaults
+        // (e.g. 65W) regardless of what's really applied, which made the slider show the wrong value.
+        int pl1 = Helpers.AppConfig.GetMode("limit_slow");
         if (pl1 <= 0)
-            pl1 = Helpers.AppConfig.GetMode("limit_slow");
+            pl1 = Platform.Linux.RyzenAdj.ReadPptLimit("ppt_pl1_spl");
 
-        int pl2 = wmi.GetPptLimit(Platform.Linux.AsusAttributes.PptPl2Sppt);
+        int pl2 = Helpers.AppConfig.GetMode("limit_fast");
         if (pl2 <= 0)
-            pl2 = Helpers.AppConfig.GetMode("limit_fast");
+            pl2 = Platform.Linux.RyzenAdj.ReadPptLimit("ppt_pl2_sppt");
 
         if (pl1 > 0)
         {
@@ -873,9 +875,9 @@ public partial class FansWindow : Window
         gridFppt.IsVisible = hasFppt;
         if (hasFppt)
         {
-            int fppt = wmi.GetPptLimit(Platform.Linux.AsusAttributes.PptFppt);
+            int fppt = Helpers.AppConfig.GetMode("limit_fppt");
             if (fppt <= 0)
-                fppt = Helpers.AppConfig.GetMode("limit_fppt");
+                fppt = Platform.Linux.RyzenAdj.ReadPptLimit("ppt_fppt");
             if (fppt > 0)
             {
                 sliderFppt.Value = fppt;
