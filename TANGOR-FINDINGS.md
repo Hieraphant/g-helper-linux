@@ -106,9 +106,15 @@ OPEN: EPP per mode (TODO); self-contained C# installer (ryzenadj+gpu-helper); vi
   for APU/CPU power. (Hardware Monitor currently uses hwmon → may misreport; revisit.)
 
 ### OPEN bugs (QA round 2)
-- **Mic mute not synced**: ghelper-audio owns the mic as a virtual source; G-Helper's mute and the
-  system (wpctl @DEFAULT_AUDIO_SOURCE@) mute don't sync → one overrides the other. Need to mirror
-  G-Helper master-mute ↔ system source-mute.
+- **Mic mute desync — FIX APPLIED:** root cause = the panel/tray "Microphone" toggle is
+  `AudioHelper.ToggleMaster` (start/stop the DSP helper), NOT a mute. Starting/stopping switches the
+  PipeWire default source and strands the mute ("system shows unmuted but no voice"). `micmute`
+  action + the hardware key target @DEFAULT_AUDIO_SOURCE@ and sync fine; only the helper-toggle drifts.
+  Fix: `App.SyncSystemMicMute(on)` (600ms settle, then force source mute to match helper state)
+  called from `audio_toggle` + `ButtonAudioToggle_Click`. NEEDS on-metal confirm.
+- **Panel Overdrive checkbox — NOT a bug:** handler/write verified correct (CheckOverdrive_Changed →
+  SetPanelOverdrive → panel_overdrive; sysfs write flips 1↔0 and sticks). Panel OD is anti-ghosting,
+  visually subtle → looked like "doesn't work" but the value really changes.
 - **Brightness Fn-hotkeys (F7/F8) — FIX APPLIED:** the Fn remapper couldn't grab the integrated
   keyboard ("No keyboard devices found") because event3 (AT Translated Set 2) + event4 (ITE5570) are
   group `input` and the user wasn't in it (the udev 0666 rule only covers vendor 0b05, not the i8042/
