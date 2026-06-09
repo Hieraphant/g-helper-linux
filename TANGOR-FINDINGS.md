@@ -78,6 +78,31 @@ DEAD/HW: dGPU clock+undervolt (vbios), dGPU own fan (PMFW).
 OPEN: EPP per mode (TODO); self-contained C# installer (ryzenadj+gpu-helper); virtual mic
 (ghelper-audio not built — low pri); minor (panel-OD notif spam, mic main-screen toggle).
 
+## 9b. QA round 2 (2026-06-08 late) + new work
+- **Restored the missing RyzenAdj knobs**: added **APU Power / CPU Temp (Tctl) / dGPU Skin** sliders
+  to the CPU tab (FansWindow), wired to RyzenAdj setters. APU is now user-controlled (SmartShift
+  lever) instead of pinned to max(PL1,PL2). Config keys: limit_apu / limit_tctl / limit_dgpu_skin.
+- **Microphone DSP works** (ghelper-audio built + embedded; needs libpipewire-0.3-dev). Denoise/
+  Vocoder/EQ/Delay run; measurably improves the user's voice-to-text (speech impediment + weak mic).
+- **CPU Boost** toggle = CPU turbo/precision boost (cpufreq `boost` sysfs). On = clock above base
+  (~4.8GHz, more heat); Off = pinned to base. Independent of the wattage sliders.
+- **Power targets to remember**: dGPU power cap = **120W** (power1_cap, GPU tab slider); CPU **150W**
+  = PL2/SPPT (slider Maximum=150, already there — was just sitting low).
+- **MONITORING SOURCE note (user):** read power/temps from the **RyzenAdj PM table**, not only hwmon —
+  the dGPU hwmon `power1_average` is glitched (~2× on this RDNA3 mobile card); RyzenAdj is ground truth
+  for APU/CPU power. (Hardware Monitor currently uses hwmon → may misreport; revisit.)
+
+### OPEN bugs (QA round 2)
+- **Mic mute not synced**: ghelper-audio owns the mic as a virtual source; G-Helper's mute and the
+  system (wpctl @DEFAULT_AUDIO_SOURCE@) mute don't sync → one overrides the other. Need to mirror
+  G-Helper master-mute ↔ system source-mute.
+- **Brightness Fn-hotkeys** (F7/F8) recognized but don't change brightness (the slider does). The Fn
+  remapper shows "No keyboard devices found" → can't grab the integrated keyboard (i8042, not 0b05;
+  udev event* rule only covers vendor 0b05). The brightness *action* also needs wiring to amdgpu_bl1.
+- **Panel Overdrive checkbox** doesn't apply (panel_od/panel_overdrive write). User has it on in KDE.
+- **gpu-helper auth prompt**: app prompts `pkexec --install-gpu-helper /opt/ghelper` for some GPU ops
+  (helper not installed). Either run the full install or route those ops via the now-writable sysfs.
+
 ## 10. Build / run / test
 - Build: `dotnet build src/GHelper.Linux.csproj -c Release -r linux-x64` (the .sln is a stub).
 - Run test instance: from `src/bin/Release/net10.0/linux-x64/` →

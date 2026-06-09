@@ -82,9 +82,50 @@
                                                VerticalAlignment="Center" />
                                 </Grid>
 
+                                <!-- RyzenAdj-only knobs (no asus-wmi equivalent): APU envelope + temps -->
+                                <Grid ColumnDefinitions="100,*,45" Margin="0,4">
+                                    <TextBlock Grid.Column="0" Text="APU Power"
+                                               Classes="label-dim" VerticalAlignment="Center"
+                                               ToolTip.Tip="APU (CPU+iGPU) power cap. Lower it to hand SmartShift budget to the dGPU." />
+                                    <Slider Grid.Column="1" x:Name="sliderApu"
+                                            Minimum="10" Maximum="80" Value="45"
+                                            TickFrequency="5"
+                                            ValueChanged="SliderApu_ValueChanged" />
+                                    <TextBlock Grid.Column="2" x:Name="labelApu" Classes="value"
+                                               Text="45W" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="100,*,45" Margin="0,4">
+                                    <TextBlock Grid.Column="0" Text="CPU Temp"
+                                               Classes="label-dim" VerticalAlignment="Center"
+                                               ToolTip.Tip="CPU thermal limit (Tctl)." />
+                                    <Slider Grid.Column="1" x:Name="sliderTctl"
+                                            Minimum="70" Maximum="100" Value="88"
+                                            TickFrequency="1"
+                                            ValueChanged="SliderTctl_ValueChanged" />
+                                    <TextBlock Grid.Column="2" x:Name="labelTctl" Classes="value"
+                                               Text="88°C" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="100,*,45" Margin="0,4">
+                                    <TextBlock Grid.Column="0" Text="dGPU Skin"
+                                               Classes="label-dim" VerticalAlignment="Center"
+                                               ToolTip.Tip="dGPU skin-temperature limit (STT)." />
+                                    <Slider Grid.Column="1" x:Name="sliderDgpuSkin"
+                                            Minimum="40" Maximum="90" Value="75"
+                                            TickFrequency="1"
+                                            ValueChanged="SliderDgpuSkin_ValueChanged" />
+                                    <TextBlock Grid.Column="2" x:Name="labelDgpuSkin" Classes="value"
+                                               Text="75°C" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+
                                 <Grid ColumnDefinitions="100,*" Margin="0,8,0,0">
                                     <TextBlock Grid.Column="0" x:Name="labelCpuBoostLabel" Text="CPU Boost"
-                                               Classes="label-dim" VerticalAlignment="Center" />
+                                               Classes="label-dim" VerticalAlignment="Center"
+                                               ToolTip.Tip="CPU turbo/precision boost. On: cores clock above base (~4.8 GHz) for max performance + more heat. Off: pinned to base — cooler, quieter, better battery. Independent of the wattage limits (boost = whether it sprints; watts = how much power while sprinting)." />
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
                                         <Button x:Name="buttonBoostOff" Classes="ghelper"
                                                 Content="Off" Click="ButtonBoostOff_Click" />

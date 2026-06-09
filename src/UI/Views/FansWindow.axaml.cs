@@ -883,6 +883,14 @@ public partial class FansWindow : Window
             }
         }
 
+        // RyzenAdj-only knobs (saved per mode; fall back to slider defaults).
+        int apu = Helpers.AppConfig.GetMode("limit_apu");
+        if (apu > 0) { sliderApu.Value = apu; labelApu.Text = $"{apu}W"; }
+        int tctl = Helpers.AppConfig.GetMode("limit_tctl");
+        if (tctl > 0) { sliderTctl.Value = tctl; labelTctl.Text = $"{tctl}°C"; }
+        int dgpuSkin = Helpers.AppConfig.GetMode("limit_dgpu_skin");
+        if (dgpuSkin > 0) { sliderDgpuSkin.Value = dgpuSkin; labelDgpuSkin.Text = $"{dgpuSkin}°C"; }
+
         _updatingPLSliders = false;
         checkApplyPower.IsChecked = Helpers.AppConfig.IsMode("auto_apply_power");
     }
@@ -927,6 +935,30 @@ public partial class FansWindow : Window
         SchedulePLWrite();
     }
 
+    private void SliderApu_ValueChanged(object? sender,
+        Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_updatingPLSliders) return;
+        labelApu.Text = $"{(int)e.NewValue}W";
+        SchedulePLWrite();
+    }
+
+    private void SliderTctl_ValueChanged(object? sender,
+        Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_updatingPLSliders) return;
+        labelTctl.Text = $"{(int)e.NewValue}°C";
+        SchedulePLWrite();
+    }
+
+    private void SliderDgpuSkin_ValueChanged(object? sender,
+        Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_updatingPLSliders) return;
+        labelDgpuSkin.Text = $"{(int)e.NewValue}°C";
+        SchedulePLWrite();
+    }
+
     /// <summary>Debounce PL slider writes - only write 300ms after the user stops dragging.</summary>
     private void SchedulePLWrite()
     {
@@ -966,16 +998,22 @@ public partial class FansWindow : Window
                 Helpers.AppConfig.SetMode("limit_fppt", fppt);
             }
 
-            // Mirror to secondary PPT - prevents stale APU/Platform SPPT
-            // from bottlenecking. Value = max(PL1, PL2).
+            // RyzenAdj-only knobs (no asus-wmi equivalent): APU envelope + temps.
+            // APU is now user-controlled (SmartShift lever) instead of pinned to the CPU ceiling.
+            int apu = (int)sliderApu.Value;
+            int tctl = (int)sliderTctl.Value;
+            int dgpuSkin = (int)sliderDgpuSkin.Value;
+            Platform.Linux.RyzenAdj.SetApuSlow(apu);
+            Platform.Linux.RyzenAdj.SetTctlTemp(tctl);
+            Platform.Linux.RyzenAdj.SetDgpuSkinTemp(dgpuSkin);
+            Helpers.AppConfig.SetMode("limit_apu", apu);
+            Helpers.AppConfig.SetMode("limit_tctl", tctl);
+            Helpers.AppConfig.SetMode("limit_dgpu_skin", dgpuSkin);
+
+            // Platform SPPT still mirrored to the CPU ceiling to avoid a stale bottleneck.
             int ceiling = Math.Max(pl1, pl2);
-            if (ceiling > 0)
-            {
-                if (wmi.IsFeatureSupported(Platform.Linux.AsusAttributes.PptApuSppt))
-                    wmi.SetPptLimit(Platform.Linux.AsusAttributes.PptApuSppt, ceiling);
-                if (wmi.IsFeatureSupported(Platform.Linux.AsusAttributes.PptPlatformSppt))
-                    wmi.SetPptLimit(Platform.Linux.AsusAttributes.PptPlatformSppt, ceiling);
-            }
+            if (ceiling > 0 && wmi.IsFeatureSupported(Platform.Linux.AsusAttributes.PptPlatformSppt))
+                wmi.SetPptLimit(Platform.Linux.AsusAttributes.PptPlatformSppt, ceiling);
         });
     }
 
