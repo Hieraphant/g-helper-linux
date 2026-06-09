@@ -759,6 +759,12 @@ public class App : Application
             case "audio_toggle":
                 {
                     bool on = AudioHelper.Instance.ToggleMaster();
+                    // This toggle starts/stops the DSP helper, which switches the PipeWire
+                    // default source. Without re-asserting the mute, the system is left
+                    // "unmuted but no voice" (out of sync with the hardware mic key / KDE
+                    // mic icon, which target @DEFAULT_AUDIO_SOURCE@). After a short settle
+                    // delay, force the source mute to match: helper ON => unmuted.
+                    SyncSystemMicMute(on);
                     System?.ShowNotification(Labels.Get("microphone"),
                         on ? Labels.Get("enabled") : Labels.Get("disabled"),
                         on ? "microphone-sensitivity-high" : "microphone-sensitivity-muted");
@@ -786,6 +792,26 @@ public class App : Application
                 NotifyAudioToggle(AudioHelper.Instance.ToggleMonitor(), "Monitor");
                 break;
         }
+    }
+
+    /// <summary>
+    /// Keep the system mic-mute (@DEFAULT_AUDIO_SOURCE@) in sync with G-Helper's mic toggle.
+    /// The toggle starts/stops the DSP helper, which switches the PipeWire default source;
+    /// without this the mute is stranded ("system shows unmuted but no voice") and drifts out
+    /// of sync with the hardware mic key / KDE mic icon. After a short settle delay (let the
+    /// new source appear), force the source mute to match: helper ON => unmuted, OFF => muted.
+    /// </summary>
+    public static void SyncSystemMicMute(bool helperOn)
+    {
+        Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+        {
+            try
+            {
+                if (Audio != null && Audio.IsMicMuted() == helperOn)
+                    Audio.ToggleMicMute();
+            }
+            catch { /* best-effort sync */ }
+        }, global::System.TimeSpan.FromMilliseconds(600));
     }
 
     private void NotifyAudioToggle(bool on, string effectName)

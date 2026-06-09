@@ -1729,7 +1729,10 @@ public partial class MainWindow : Window
     /// </summary>
     private void ButtonAudioToggle_Click(object? sender, RoutedEventArgs e)
     {
-        Helpers.AudioHelper.Instance.ToggleMaster();
+        bool on = Helpers.AudioHelper.Instance.ToggleMaster();
+        // Re-assert the system mic-mute so this toggle stays in sync with the hardware key /
+        // KDE mic icon (starting/stopping the helper switches the PipeWire default source).
+        App.SyncSystemMicMute(on);
         RefreshAudioToggle();
         _audioWindow?.RefreshFromMain();
     }
