@@ -113,9 +113,13 @@ OPEN: EPP per mode (TODO); self-contained C# installer (ryzenadj+gpu-helper); vi
   keyboard ("No keyboard devices found") because event3 (AT Translated Set 2) + event4 (ITE5570) are
   group `input` and the user wasn't in it (the udev 0666 rule only covers vendor 0b05, not the i8042/
   ITE keyboard). Fix: add user to `input` group (`usermod -aG input` — now done + added to install.sh).
-  Needs re-login OR launch the app with `sg input` for the running process. After that the remapper
-  grabs the keyboard and re-emits KEY_BRIGHTNESS{UP,DOWN} for KDE to act on. (Verify KDE then changes
-  amdgpu_bl1 brightness; if not, that's a separate powerdevil issue.)
+  Needs re-login OR launch with `sg input`. RESULT (log-verified): remapper now grabs the keyboard,
+  remaps F7→224(BrightnessDown)/F8→225(BrightnessUp) when FN-Lock ON, and **KDE acts on the keysym →
+  brightness changes**. WORKS. Caveats: (a) FN-Lock is by design — ON = top-row media/brightness,
+  OFF = plain F-keys; (b) on re-enable it logged "no devices grabbed" because the per-device capture
+  choice (config `fnlock_capture_VVVV_PPPP_BB`) got set to 0 while cycling → fix in UI: Function Key
+  Remap → Devices to capture → Rescan → check the keyboard (sets choice=1); (c) physical Fn+F7 with
+  FN-Lock OFF is the hardware EC Fn layer, NOT the remapper — may not emit a brightness keysym on Linux.
 - **Panel Overdrive checkbox** doesn't apply (panel_od/panel_overdrive write). User has it on in KDE.
 - **gpu-helper auth prompt**: app prompts `pkexec --install-gpu-helper /opt/ghelper` for some GPU ops
   (helper not installed). Either run the full install or route those ops via the now-writable sysfs.
