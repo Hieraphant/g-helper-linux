@@ -65,7 +65,11 @@ Most work is **R** — small, upstream-friendly diffs.
 | Suppress nag popups (sysfiles/update) | ✅ | per-user config flags |
 
 ## Upstreaming concerns (keep diffs liftable)
-- Gate the RyzenAdj reroute behind a default-off config flag (currently unconditional).
+- **Gate the RyzenAdj reroute behind the EXISTING auto-detect** — g-helper already detects vendor in
+  `App.InitializeGpuControl()` (try NVIDIA `IsAvailable()` → else AMD, vendor 0x1002 → `App.GpuControl`).
+  So the trigger is already there: gate our reroute on `App.GpuControl is LinuxAmdGpuControl` (AMD only;
+  NVIDIA/Intel untouched). No new DMI/PCI code. DMI board = `/sys/class/dmi/id/board_name` (FA617NT) if
+  per-board logic ever needed. This is "DMI says AMD → load AMD module," reusing what's already wired.
 - EPP as a separate window/module (easy removal).
 - Everything else is additive R/F — small reviewable diffs.
 
