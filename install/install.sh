@@ -429,6 +429,17 @@ _info "udev daemon reloaded"
 udevadm trigger
 _info "udev trigger fired — re-applying all RUN commands"
 
+# ── Fn-key remapper needs to grab the integrated keyboard ──
+# The integrated keyboard event devices (e.g. AT Translated Set 2, ITE) are group
+# "input"; the remapper (FnLockRemapper, EVIOCGRAB) can only open them if the user is
+# in that group. ASUS-vendor (0b05) devices are covered by the udev 0666 rule, but the
+# main keyboard often isn't (i8042 / ITE), so add the user to the input group.
+if [[ -n "${SUDO_USER:-}" ]] && ! id -nG "$SUDO_USER" | tr ' ' '\n' | grep -qx input; then
+    usermod -aG input "$SUDO_USER" \
+        && _inject "added $SUDO_USER to 'input' group (Fn-key remapper) — re-login to take effect" \
+        || _warn "could not add $SUDO_USER to input group (Fn-key remapper may not grab the keyboard)"
+fi
+
 # ── Remove stale tmpfiles.d config from previous versions ──
 # The 90-ghelper.conf tmpfiles config was redundant with udev rules and
 # risked kernel deadlocks if 'w' directives were ever added. Removed in v2.

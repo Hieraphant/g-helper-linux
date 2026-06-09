@@ -109,9 +109,13 @@ OPEN: EPP per mode (TODO); self-contained C# installer (ryzenadj+gpu-helper); vi
 - **Mic mute not synced**: ghelper-audio owns the mic as a virtual source; G-Helper's mute and the
   system (wpctl @DEFAULT_AUDIO_SOURCE@) mute don't sync → one overrides the other. Need to mirror
   G-Helper master-mute ↔ system source-mute.
-- **Brightness Fn-hotkeys** (F7/F8) recognized but don't change brightness (the slider does). The Fn
-  remapper shows "No keyboard devices found" → can't grab the integrated keyboard (i8042, not 0b05;
-  udev event* rule only covers vendor 0b05). The brightness *action* also needs wiring to amdgpu_bl1.
+- **Brightness Fn-hotkeys (F7/F8) — FIX APPLIED:** the Fn remapper couldn't grab the integrated
+  keyboard ("No keyboard devices found") because event3 (AT Translated Set 2) + event4 (ITE5570) are
+  group `input` and the user wasn't in it (the udev 0666 rule only covers vendor 0b05, not the i8042/
+  ITE keyboard). Fix: add user to `input` group (`usermod -aG input` — now done + added to install.sh).
+  Needs re-login OR launch the app with `sg input` for the running process. After that the remapper
+  grabs the keyboard and re-emits KEY_BRIGHTNESS{UP,DOWN} for KDE to act on. (Verify KDE then changes
+  amdgpu_bl1 brightness; if not, that's a separate powerdevil issue.)
 - **Panel Overdrive checkbox** doesn't apply (panel_od/panel_overdrive write). User has it on in KDE.
 - **gpu-helper auth prompt**: app prompts `pkexec --install-gpu-helper /opt/ghelper` for some GPU ops
   (helper not installed). Either run the full install or route those ops via the now-writable sysfs.
