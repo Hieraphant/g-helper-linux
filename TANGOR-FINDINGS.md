@@ -158,13 +158,17 @@ OPEN: EPP per mode (TODO); self-contained C# installer (ryzenadj+gpu-helper); vi
   (self-matches the command line; hit this 3×).
 - Screenshot: `spectacle -b -n -f -o x.png`; raise windows via `qdbus6 org.kde.KWin /Scripting`.
 
-## 9d. STAPM is firmware-locked on FA617NT (decisive, 2026-06-09)
-Verified on-metal as ROOT: `ryzenadj --stapm-limit=60000` prints "Successfully set" but STAPM
-stays 174 (read at t+0/+3/+8s — not re-assertion, it just never takes). `--slow-limit`,
-`--fast-limit`, `--apu-slow-limit` ALL stick instantly as root. So the firmware locks STAPM and
-ryzenadj's success message is a lie. CONSEQUENCE: PL1(SPL) was mapped to `--stapm-limit` = dead
-lever → dragging it did nothing while GUI/config showed values (this also explains the GUI-60 /
-config-58 / SMU-174 mismatch). FIX: PL1(SPL)→`--slow-limit` (working sustained lever),
-PL2(SPPT)+fPPT→`--fast-limit`, APU→`--apu-slow-limit`. Working CPU power levers on this board:
-slow-limit, fast-limit, apu-slow-limit (all root). Dead: stapm-limit. NOTE: all power writes go
-through RyzenAdj as root (sudoers NOPASSWD), NEVER the asus-wmi PPT sysfs (cosmetic).
+## 9d. STAPM behaviour — CORRECTED 2026-06-09 (earlier "firmware-locked" was WRONG)
+The earlier claim ("stapm-limit never takes") was an artifact. RE-TESTED clean (g-helper OFF,
+RyzenAdj read+write): writing **stapm=55 WITH slow=55 & fast=55 → STAPM reads 55 and HOLDS**. So
+`--stapm-limit` DOES take effect. Three confounds produced the false "dead" reading:
+  1. **STAPM readback lags ~3s** (slow/fast reflect instantly). Earlier reads at t+0/t+1 caught
+     the stale 174 → looked like it never took.
+  2. **STAPM is subordinate to slow-limit** — it won't sit below slow. The isolated test set
+     stapm=40 while slow stayed 150, so STAPM tracked ~slow (≈145), not 40 → looked dead.
+  3. **g-helper confound:** its reapply re-asserts slow/fast but NOT stapm, so with g-helper
+     running stapm stayed clobbered while slow held → false "slow works / stapm dead."
+NET: slow-limit is the *controlling* sustained lever and STAPM follows it, so PL1(SPL)→`--slow-limit`
+STILL STANDS — but stapm-limit is NOT dead. PL2(SPPT)+fPPT→`--fast-limit`, APU→`--apu-slow-limit`.
+The June-4 sweep's "revert to 174/145/80" was a *clobber event* firing between two reads, not stapm
+being inert. All power writes go through RyzenAdj (NEVER the cosmetic asus-wmi PPT sysfs).

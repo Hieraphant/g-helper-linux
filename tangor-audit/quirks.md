@@ -7,7 +7,7 @@ surface) and `TANGOR-FINDINGS.md` (the deep why). Status: ✅ fixed · 🔶 miti
 | # | Quirk | Status | Resolution |
 |---|---|---|---|
 | 1 | asus-wmi PPT sysfs is cosmetic — stores values, never reaches SMU | ✅ | route all power through RyzenAdj |
-| 2 | `--stapm-limit` did not take effect in testing (readback stays 174; didn't cap power at 40 under load, app off, past 10s). STAPM is a minutes-scale avg, so not 100% excluded over very long loads | 🔶 | map PL1/SPL → `slow-limit` (reliable, fast-acting sustained lever) |
+| 2 | **CORRECTED** — `--stapm-limit` DOES take effect via RyzenAdj (stapm=55 w/ slow=55,fast=55 → STAPM=55, held, g-helper off). Earlier "dead" was a confound: STAPM readback **lags ~3s**, STAPM is **subordinate to slow-limit** (won't sit below slow), and g-helper reinforces slow/fast but NOT stapm so it stayed clobbered | ✅ | PL1/SPL → `slow-limit` still correct (slow is the controlling lever STAPM follows) |
 | 3 | Slider showed cosmetic firmware default (65W) while SMU was 44W | ✅ | read from `ryzenadj -i`/config, not the cosmetic node |
 | 4 | Mode-switch clobbers power (resets PPT to firmware) — fires on KDE PPD profile change, Fn+F5, AC plug/unplug | 🔶 | reinforcement timer re-asserts via RyzenAdj; note: this clobber predates the fork (KDE owns `platform_profile`) |
 | 5 | Fan **Reset** (reset-to-base) clobbers power (SLOW 31→145) | 🔶 | reinforcement timer recovers; ⬜ re-assert in fan handler still open |
